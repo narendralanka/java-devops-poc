@@ -1,15 +1,21 @@
+
 pipeline {
     agent any
 
     environment {
-        JAVA_HOME        = '/usr/lib/jvm/java-17-amazon-corretto.x86_64'
-        PATH             = "${JAVA_HOME}/bin:${env.PATH}"
+        // Java 17 on your Jenkins node
+        JAVA_HOME = '/usr/lib/jvm/java-17-amazon-corretto.x86_64'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
 
-        SONARQUBE_SERVER = 'MySonar'                 // Jenkins SonarQube server name
+        // Name of SonarQube server in Jenkins config (Manage Jenkins → Configure System → SonarQube)
+        SONARQUBE_SERVER = 'MySonar'
+
+        // SonarQube project key (must match the project in SonarQube)
         SONAR_PROJECT_KEY = 'java-devops-poc'
 
-        DOCKER_REGISTRY  = 'docker.io'
-        DOCKER_IMAGE     = 'narendralanka/java-devops-poc'
+        // Docker image details (example: Docker Hub)
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_IMAGE = 'narendralanka/java-devops-poc'
     }
 
     stages {
@@ -28,17 +34,17 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    withCredentials([string(credentialsId: 'sonar-token',
-                                            variable: 'SONAR_TOKEN')]) {
-                        sh """
+                    // Uses Jenkins "Secret text" credential with ID 'sonar-token'
+                    withCredentials([string(credentialsId: 'Sonar-Java-Poc', variable: 'SONAR_TOKEN')]) {
+                        sh '''
                             mvn sonar:sonar \
-                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.projectKey=$SONAR_PROJECT_KEY \
                               -Dsonar.projectName="Java DevOps POC" \
                               -Dsonar.sources=src \
                               -Dsonar.java.binaries=target/classes \
-                              -Dsonar.host.url=http://3.106.124.241:9000/ \
-                              -Dsonar.login=${SONAR_TOKEN}
-                        """
+                              -Dsonar.host.url=$SONAR_HOST_URL \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
                     }
                 }
             }
@@ -46,23 +52,8 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                script {
-                    try {
-                        // Still give Sonar some time to process
-                        timeout(time: 15, unit: 'MINUTES') {
-                            def qg = waitForQualityGate()
-                            echo "Quality Gate status: ${qg.status}"
-
-                            // If you want to FAIL the build when QG is not OK, uncomment below:
-                            // if (qg.status != 'OK') {
-                            //     error "Pipeline failed due to Quality Gate: ${qg.status}"
-                            // }
-                        }
-                    } catch (err) {
-                        // Don't abort the pipeline, just mark as unstable or log it
-                        echo "Quality Gate check failed or timed out: ${err}"
-                        currentBuild.result = 'UNSTABLE'
-                    }
+                timeout(time: 15, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
