@@ -12,8 +12,9 @@
     <description>Java DevOps POC with Jenkins, SonarQube and Docker</description>
 
     <properties>
-        <java.version>17</java.version>
-        <spring.boot.version>3.3.5</spring.boot.version>
+    <java.version>17</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
 
     <dependencies>
