@@ -34,7 +34,7 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
                     // Uses Jenkins "Secret text" credential with ID 'sonar-token'
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'Sonar-Java-Poc', variable: 'SONAR_TOKEN')]) {
                         sh '''
                             mvn sonar:sonar \
                               -Dsonar.projectKey=$SONAR_PROJECT_KEY \
