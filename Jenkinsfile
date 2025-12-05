@@ -6,10 +6,10 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-amazon-corretto.x86_64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
 
-        // Name of SonarQube server in Jenkins config
+        // Name of SonarQube server in Jenkins config (Manage Jenkins → Configure System → SonarQube)
         SONARQUBE_SERVER = 'MySonar'
 
-        // SonarQube project key
+        // SonarQube project key (must match the project in SonarQube)
         SONAR_PROJECT_KEY = 'java-devops-poc'
 
         // Docker image details (example: Docker Hub)
@@ -33,13 +33,18 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    sh """
-                        mvn sonar:sonar \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName="Java DevOps POC" \
-                          -Dsonar.sources=src \
-                          -Dsonar.java.binaries=target/classes
-                    """
+                    // Uses Jenkins "Secret text" credential with ID 'sonar-token'
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=$SONAR_PROJECT_KEY \
+                              -Dsonar.projectName="Java DevOps POC" \
+                              -Dsonar.sources=src \
+                              -Dsonar.java.binaries=target/classes \
+                              -Dsonar.host.url=$SONAR_HOST_URL \
+                              -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
                 }
             }
         }
