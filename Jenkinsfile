@@ -34,16 +34,17 @@ pipeline {
 
         stage('Dependency Check (OWASP)') {
             steps {
-                // Runs OWASP Dependency-Check via Maven plugin
-                sh '''
-                    mvn \
-                      org.owasp:dependency-check-maven:8.4.0:check
-                '''
-                // Archive reports so you can see them in Jenkins
-                archiveArtifacts artifacts: 'target/dependency-check-report.*',
-                                 allowEmptyArchive: true
-            }
-        }
+               sh '''
+                  # Uses plugin + version from pom.xml
+                  mvn org.owasp:dependency-check-maven:check
+              '''
+
+               // Your config writes HTML under: target/dependency-check-report
+              archiveArtifacts artifacts: 'target/dependency-check-report/dependency-check-report.html',
+                         allowEmptyArchive: true
+            }  
+         }
+
 
         stage('SonarQube Analysis') {
             steps {
