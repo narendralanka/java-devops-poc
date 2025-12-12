@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -7,15 +6,17 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-17-amazon-corretto.x86_64'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
 
-        // Name of SonarQube server in Jenkins config (Manage Jenkins → Configure System → SonarQube)
+        // SonarQube
         SONARQUBE_SERVER = 'MySonar'
-
-        // SonarQube project key (must match the project in SonarQube)
         SONAR_PROJECT_KEY = 'java-devops-poc'
 
-        // Docker image details (example: Docker Hub)
+        // Docker image details
         DOCKER_REGISTRY = 'docker.io'
-        DOCKER_IMAGE = 'narendralanka/java-devops-poc'
+        DOCKER_IMAGE    = 'narendralanka/java-devops-poc'
+
+        // Trivy settings
+        TRIVY_SEVERITY       = 'HIGH,CRITICAL'
+        TRIVY_IGNORE_UNFIXED = 'true'
     }
 
     stages {
@@ -31,10 +32,22 @@ pipeline {
             }
         }
 
+        stage('Dependency Check (OWASP)') {
+            steps {
+                // Runs OWASP Dependency-Check via Maven plugin
+                sh '''
+                    mvn \
+                      org.owasp:dependency-check-maven:8.4.0:check
+                '''
+                // Archive reports so you can see them in Jenkins
+                archiveArtifacts artifacts: 'target/dependency-check-report.*',
+                                 allowEmptyArchive: true
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    // Uses Jenkins "Secret text" credential with ID 'sonar-token'
                     withCredentials([string(credentialsId: 'Sonar-Java-Poc', variable: 'SONAR_TOKEN')]) {
                         sh '''
                             mvn sonar:sonar \
@@ -50,13 +63,25 @@ pipeline {
             }
         }
 
-        
-
         stage('Build Docker Image') {
             steps {
                 sh """
                     docker build -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} .
                     docker tag ${DOCKER_IMAGE}:${env.BUILD_NUMBER} ${DOCKER_IMAGE}:latest
+                """
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                // Fails the build if HIGH/CRITICAL vulns are found
+                sh """
+                    trivy image \
+                      --severity ${TRIVY_SEVERITY} \
+                      --exit-code 1 \
+                      --ignore-unfixed=${TRIVY_IGNORE_UNFIXED} \
+                      --no-progress \
+                      ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
                 """
             }
         }
