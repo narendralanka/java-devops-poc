@@ -46,6 +46,19 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.2.0</version>
+               <configuration>
+                  <!-- failBuildOnCVSS can be tuned, or removed if you don't want to fail the build -->
+                  <failBuildOnCVSS>7.0</failBuildOnCVSS>
+                  <format>HTML</format>
+                  <outputDirectory>target/dependency-check-report</outputDirectory>
+               </configuration>
+            </plugin>
+     
         </plugins>
     </build>
 
